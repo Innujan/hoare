@@ -1,6 +1,6 @@
 structure Main = struct
 
-  fun readFile filename =
+  (*fun readFile filename =
     let
       val instream = TextIO.openIn filename
       val content = TextIO.inputAll instream
@@ -16,14 +16,16 @@ structure Main = struct
       print ("using filename: " ^ filename ^ " with contents: " ^ source);
       Parser.parse(source);
       OS.Process.success
-    end
+    end*)
 
     
   fun main (progName, args) =
-      case args of
-        [] => (print "usage: prover <filename.imp>\n"; OS.Process.failure)
-      | [filename] =>
-        (processFile filename; OS.Process.success)
-      | _ => (print "error: too many arguments.\n"; OS.Process.failure)
+    let
+      val triple = Datatypes.toStringTriple(Test.current_goal : Datatypes.triple)
+      (*val triple = Datatypes.toStringBexp(#1 Test.current_goal) ^ Datatypes.toStringProgram(#2 Test.current_goal) ^ Datatypes.toStringBexp(#3 Test.current_goal)
+       *) in
+      print ("using triple: " ^ triple);
+      OS.Process.success
+    end
 
 end
