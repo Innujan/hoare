@@ -8,14 +8,7 @@ sml make.sml
 ```
 This will produce as output `hoare.[architecture details]`. To execute launch
 ```
-sml @SMLload=hoare.[architecture details] "$@" <input_file>
+sml @SMLload=hoare.[architecture details] "$@"
 ```
 
-The input file should contain the structure of a Hoare Triple in the following exact structure
-```
-[PRECONDITIONS]
-[PROGRAM]
-[POSTCONDITIONS]
-```
-- Preconditions and postconditions must be boolean formulae
-- Programs must be written in the *Imp* abstract syntax (skip, assignment, concat, if then else and while)
+Use the provided file `test.sml` to define the input of the program, using the constructors of boolean expressions and *Imp* programs, that you can find in the `datatypes.sml` file.

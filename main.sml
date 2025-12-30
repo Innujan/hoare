@@ -1,5 +1,6 @@
 structure Main = struct
 
+  (*CODICE PER LEGGERE FILE*)
   (*fun readFile filename =
     let
       val instream = TextIO.openIn filename
@@ -18,14 +19,17 @@ structure Main = struct
       OS.Process.success
     end*)
 
+    open Datatypes
+    open Test
+    open Loop
     
+    (*Input integrato da file a parte*)
   fun main (progName, args) =
     let
-      val triple = Datatypes.toStringTriple(Test.current_goal : Datatypes.triple)
-      (*val triple = Datatypes.toStringBexp(#1 Test.current_goal) ^ Datatypes.toStringProgram(#2 Test.current_goal) ^ Datatypes.toStringBexp(#3 Test.current_goal)
+      val test_triple = current_goal : triple
+      (*PER LETTURA DA FILE: val triple = Datatypes.toStringBexp(#1 Test.current_goal) ^ Datatypes.toStringProgram(#2 Test.current_goal) ^ Datatypes.toStringBexp(#3 Test.current_goal)
        *) in
-      print ("using triple: " ^ triple);
-      OS.Process.success
+      (loop([test_triple]); OS.Process.success)
     end
 
 end

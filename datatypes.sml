@@ -7,6 +7,10 @@ structure Datatypes = struct
   type triple = Bexp * Program * Bexp
   datatype token = tvar of string | timply | tequal | tless | tsemicol | tassign | tlbr | trbr
 
+  fun boolnot(b: Bexp) = imply(b, boolean(false))
+  fun boolor(b1: Bexp, b2: Bexp) = imply(boolnot(b1), b2)
+  fun booland(b1: Bexp,b2: Bexp) = boolnot(imply(b1, boolnot(b2)))
+
   fun toStringNexp(n: Nexp) =
     let
       val s = case n of num n => Int.toString(n)
@@ -37,8 +41,9 @@ structure Datatypes = struct
       s
     end
 
-  fun toStringTriple(t: triple) = "{" ^ toStringBexp(#1 t) ^ "} " ^ toStringProgram(#2 t) ^ "{" ^  toStringBexp(#3 t) ^ "}";
+  fun toStringTriple(t: triple) = "{" ^ toStringBexp(#1 t) ^ "} " ^ toStringProgram(#2 t) ^ " {" ^  toStringBexp(#3 t) ^ "}";
 
+  (*PROTOTIPI DI FUNZIONI PER PARSING DA STRINGA (LETTURA DA FILE)*)
   (*fun boolLex [] = []
     | boolLex (#" " :: cs) = boolLex cs
     | boolLex (#"(" :: cs) = tlbr :: boolLex cs
