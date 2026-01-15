@@ -1,6 +1,7 @@
 Group is
     $/basis.cm      
     datatypes.sml
+	parser.sml
     test.sml
     loop.sml
     main.sml

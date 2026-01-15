@@ -29,7 +29,10 @@ structure Main = struct
       val test_triple = current_goal : triple
       (*PER LETTURA DA FILE: val triple = Datatypes.toStringBexp(#1 Test.current_goal) ^ Datatypes.toStringProgram(#2 Test.current_goal) ^ Datatypes.toStringBexp(#3 Test.current_goal)
        *) in
-      (loop([test_triple]); OS.Process.success)
+      (loop([StepData{triple=test_triple,rule=Rule{
+		premises = [],
+		conclusion = selectedtriple test_triple
+	  },Q=NONE}], test_triple, ""); OS.Process.success)
     end
 
 end
