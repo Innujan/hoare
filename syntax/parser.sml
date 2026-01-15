@@ -128,4 +128,48 @@ structure Parser = struct
 			else
 				raise Fail ("Invalid Bexp: " ^ s)
 		end
+		
+	fun ProgramFromString s =
+		let
+			val s = trim s
+		in
+			if s = "skip" orelse s = "skip()" then
+				skip
+
+			else if startsWith ("assign(", s) andalso endsWith (")", s) then
+				let
+					val inner = String.substring(s, 7, String.size s - 8)
+					val (lhs, rhs) = splitOnce (#",", inner)
+				in
+					assign (NexpFromString (trim lhs), NexpFromString (trim rhs))
+				end
+
+			else if startsWith ("comp(", s) andalso endsWith (")", s) then
+				let
+					val inner = String.substring(s, 5, String.size s - 6)
+					val (p1, p2) = splitOnce (#",", inner)
+				in
+					concat (ProgramFromString (trim p1), ProgramFromString (trim p2))
+				end
+
+			else if startsWith ("if(", s) andalso endsWith (")", s) then
+				let
+					val inner = String.substring(s, 3, String.size s - 4)
+					val (bpart, rest) = splitOnce (#",", inner)
+					val (p1, p2) = splitOnce (#",", rest)
+				in
+					ifThenElse (BexpFromString (trim bpart), ProgramFromString (trim p1), ProgramFromString (trim p2))
+				end
+
+			else if startsWith ("while(", s) andalso endsWith (")", s) then
+				let
+					val inner = String.substring(s, 6, String.size s - 7)
+					val (bpart, ppart) = splitOnce (#",", inner)
+				in
+					whileDo (BexpFromString (trim bpart), ProgramFromString (trim ppart))
+				end
+
+			else
+				raise Fail ("Invalid Program: " ^ s)
+		end
 end

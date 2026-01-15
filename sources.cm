@@ -1,7 +1,11 @@
 Group is
     $/basis.cm      
-    datatypes.sml
-	parser.sml
-    test.sml
+    imp/datatypes.sml
+	imp/utils.sml
+	imp/standardization.sml
+	imp/substitution.sml
+	imp/weakestprecondition.sml
+	syntax/prettyprint.sml
+	syntax/parser.sml
     loop.sml
     main.sml

@@ -11,4 +11,4 @@ This will produce as output `hoare.[architecture details]`. To execute launch
 sml @SMLload=hoare.[architecture details] "$@"
 ```
 
-Use the provided file `test.sml` to define the input of the program, using the constructors of boolean expressions and *Imp* programs, that you can find in the `datatypes.sml` file.
+Input triple is defined in input.txt file on root folder of source directory. The file must have at least three lines, and the final three lines are used to input the desired triple into the program.

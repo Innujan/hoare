@@ -1,5 +1,10 @@
 structure Loop = struct
   open Datatypes
+  open Utils
+  open Standardization
+  open Substitution
+  open WeakestPrecondition
+  open PrettyPrint
   open Parser
 
   (*funzione che applica la regola specificata da linea di comando*)
@@ -180,7 +185,7 @@ structure Loop = struct
             ( print "Invalid input!\n> "; readBexp () )
     end
   
-  fun loop (stepdata : StepData list, original_triple : triple, message : string) =
+  fun loop (stepdata : StepData list, original_triple : triple, message : string, prev_stepdata : StepData list list) =
     case stepdata of
          [] => (print "\nProof is complete\n"; OS.Process.success) (*stack vuoto: nulla da dimostrare*)
        | (StepData{triple=c_triple,rule=c_rule,Q=_} :: r_stepdata) => (*estrae la cima dello stack*)
@@ -200,6 +205,9 @@ structure Loop = struct
 			 
 			 val _ = print "Choose an inference rule to apply:\n"
 			 val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "str", "weak", "and", "or", "skip", "assign", "if", "while", "comp"])))
+			 val _ = (case prev_stepdata of
+						  [] => ()
+					    | _ => print "\nOr type undo to undo the previous step")
 			 val _ = print "\n> "
 			 
 			 
@@ -210,56 +218,61 @@ structure Loop = struct
 							case TextIO.inputLine TextIO.stdIn of
 								NONE => ""
 							  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
-				val q = if List.exists (fn y => input = y) ["str", "weak"] then
-				  let 
-					  val _ = print("\n" ^ toStringRule(Rule{
-						premises = if input="str" then 	[pdummy (toStringBexp(#1 c_triple) ^ " => Q"), pdummy ("{Q} " ^ toStringProgram(#2 c_triple) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")] else 
-														[pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(#2 c_triple) ^ " {Q}"), pdummy ("Q => " ^ toStringBexp(#3 c_triple))],
-						conclusion = normaltriple c_triple
-					  }))
-				      val _ = print "\n\nInput Q to continue:\n> "
-				  in 
+				in 
+			      case (input,prev_stepdata) of 
+					("undo",stepdata :: prev_stepdata ) => loop(stepdata, original_triple, "Last step was undone.", prev_stepdata)
+				  | _ => let
+					val q = if List.exists (fn y => input = y) ["str", "weak"] then
+					  let 
+						  val _ = print("\n" ^ toStringRule(Rule{
+							premises = if input="str" then 	[pdummy (toStringBexp(#1 c_triple) ^ " => Q"), pdummy ("{Q} " ^ toStringProgram(#2 c_triple) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")] else 
+															[pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(#2 c_triple) ^ " {Q}"), pdummy ("Q => " ^ toStringBexp(#3 c_triple))],
+							conclusion = normaltriple c_triple
+						  }))
+						  val _ = print "\n\nInput Q to continue:\n> "
+					  in 
 
-					let
-						val input = readBexp ()
-						val _ = print (toStringBexp input)
-					in
-						SOME input
-					end
+						let
+							val input = readBexp ()
+							val _ = print (toStringBexp input)
+						in
+							SOME input
+						end
 
-				  end
-			   else if input="comp" andalso programType(#2 c_triple) = "comp" then
-			      let
-					  val _ = case (#2 c_triple) of
-						concat (_, b) => print("\nTry using the weakest precondition of the final program: Q = " ^ toStringBexp(weakestPrecondition(b, #3 c_triple)) ^ "\n")
-						| _ => ()
-					  
-					  val _ = print("\n" ^ toStringRule(Rule{
-						premises = case (#2 c_triple) of
-						concat (a, b) => [pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(a) ^ " {Q}"), pdummy ("{Q} " ^ toStringProgram(b) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")]
-						| _ => [],
-						conclusion = normaltriple c_triple
-					  }))
-				      val _ = print "\n\nInput Q to continue:\n> "
-				  in 
+					  end
+				   else if input="comp" andalso programType(#2 c_triple) = "comp" then
+					  let
+						  val _ = case (#2 c_triple) of
+							concat (_, b) => print("\nTry using the weakest precondition of the final program: Q = " ^ toStringBexp(weakestPrecondition(b, #3 c_triple)) ^ "\n")
+							| _ => ()
+						  
+						  val _ = print("\n" ^ toStringRule(Rule{
+							premises = case (#2 c_triple) of
+							concat (a, b) => [pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(a) ^ " {Q}"), pdummy ("{Q} " ^ toStringProgram(b) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")]
+							| _ => [],
+							conclusion = normaltriple c_triple
+						  }))
+						  val _ = print "\n\nInput Q to continue:\n> "
+					  in 
 
-					let
-						val input = readBexp ()
-						val _ = print (toStringBexp input)
-					in
-						SOME input
-					end
-				  end
-			   else NONE
-             in
-			   
-               let
-                 val StepResult{stepdata = n_stepdata, message = message} = apply(input, StepData{
-					triple=c_triple,rule=c_rule,Q=q
-				 }) (*applica la regola d'inferenza specificata per ottenere le premesse della tripla corrente*)
-               in
-                 loop (n_stepdata @ r_stepdata, original_triple, message) (*riesegui la funzione aggiungendo sullo stack le premesse, non ancora dimostrate*)
-               end
-		     end
+						let
+							val input = readBexp ()
+							val _ = print (toStringBexp input)
+						in
+							SOME input
+						end
+					  end
+				   else NONE
+				 in
+				   
+				   let
+					 val StepResult{stepdata = n_stepdata, message = message} = apply(input, StepData{
+						triple=c_triple,rule=c_rule,Q=q
+					 }) (*applica la regola d'inferenza specificata per ottenere le premesse della tripla corrente*)
+				   in
+					 loop (n_stepdata @ r_stepdata, original_triple, message, if message = "" then stepdata :: prev_stepdata else prev_stepdata) (*riesegui la funzione aggiungendo sullo stack le premesse, non ancora dimostrate*)
+				   end
+				 end
+			  end
            end
 end

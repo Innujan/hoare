@@ -1,7 +1,10 @@
 structure Main = struct
+  open Datatypes
+  open Loop
+  open Parser
 
   (*CODICE PER LEGGERE FILE*)
-  (*fun readFile filename =
+  fun readFile filename =
     let
       val instream = TextIO.openIn filename
       val content = TextIO.inputAll instream
@@ -9,30 +12,59 @@ structure Main = struct
       TextIO.closeIn instream;
       content
     end
-
-  fun processFile filename =
+	
+  fun splitLines s =
     let
-      val source = readFile filename
+      val rawLines = String.tokens (fn c => c = #"\n" orelse c = #"\r") s
     in
-      print ("using filename: " ^ filename ^ " with contents: " ^ source);
-      Parser.parse(source);
-      OS.Process.success
-    end*)
+      List.filter (fn line => String.size (trim line) > 0) rawLines (*rimuove righe vuote e righe extra causate da parsing \r\n in caso windows*)
+    end
 
-    open Datatypes
-    open Test
-    open Loop
-    
+  fun tripleFromFile filename =
+    let
+      val lines = splitLines (readFile filename)
+      val lineCount = List.length lines
+      val () = if lineCount < 3 then
+				  (print ("Input file does not have enough lines\n");
+				   raise Fail "too few lines")
+               else ()
+      val last3 = List.drop (lines, lineCount - 3)
+      val line1 = List.nth (last3, 0)
+      val line2 = List.nth (last3, 1)
+      val line3 = List.nth (last3, 2)
+
+      val bexp1 =
+        (BexpFromString (trim line1)) handle Fail msg =>
+          (print ("Error parsing precondition: " ^ line1 ^ "\n");
+           raise Fail "precondition parsing failed")
+
+      val prog =
+        (ProgramFromString (trim line2)) handle Fail msg =>
+          (print ("Error parsing program: " ^ line2 ^ "\n");
+           raise Fail "program parsing failed")
+
+      val bexp2 =
+        (BexpFromString (trim line3)) handle Fail msg =>
+          (print ("Error parsing postcondition: " ^ line3 ^ "\n");
+           raise Fail "postcondition parsing failed")
+    in
+      (bexp1, prog, bexp2)
+    end
+
     (*Input integrato da file a parte*)
   fun main (progName, args) =
     let
-      val test_triple = current_goal : triple
-      (*PER LETTURA DA FILE: val triple = Datatypes.toStringBexp(#1 Test.current_goal) ^ Datatypes.toStringProgram(#2 Test.current_goal) ^ Datatypes.toStringBexp(#3 Test.current_goal)
-       *) in
-      (loop([StepData{triple=test_triple,rule=Rule{
-		premises = [],
-		conclusion = selectedtriple test_triple
-	  },Q=NONE}], test_triple, ""); OS.Process.success)
+      val test_triple : triple = tripleFromFile "input.txt" handle _ => 
+                (print ("Unable to open input file\n"); raise Fail "unable to open input file")
+
+      val stepData = StepData {
+        triple = test_triple,
+        rule   = Rule { premises = [], conclusion = selectedtriple test_triple },
+        Q      = NONE
+      }
+    in
+      loop ([stepData], test_triple, "", []);
+      OS.Process.success
     end
 
 end
