@@ -2,10 +2,10 @@ Group is
     $/basis.cm      
     imp/datatypes.sml
 	imp/utils.sml
+	syntax/prettyprint.sml
 	imp/standardization.sml
 	imp/substitution.sml
 	imp/weakestprecondition.sml
-	syntax/prettyprint.sml
 	syntax/parser.sml
     loop.sml
     main.sml

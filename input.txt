@@ -1,3 +1,3 @@
-less(num(1),var(x))
-comp(assign(var(t),var(x)),assign(var(y),var(t)))
-less(num(1),var(y))
+equal(var(x), var(0))
+while(equal(var(x), var(0)), assign(var(x), var(2)))
+equal(var(x), var(1))

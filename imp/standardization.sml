@@ -73,15 +73,42 @@ structure Standardization = struct
 				val varsidew = getVarsLHPlus(w1)
 				val numsw = getNumPlus(w1)
 			in
-				if(varsidev = varsidew andalso v2 = w2 andalso numsw <= numsv) then
-					boolean true
-				else
-					boolean false
+				if(varsidev = varsidew andalso v2 = w2) then
+					if numsw <= numsv then
+						boolean true
+					else
+						(case (standardizeBexp(less(v1,v2)),standardizeBexp(less(plus(w2, num ~1),w1))) of
+						(less(x1, x2), less(y1, y2)) => 
+							let
+								val numsx = getNumPlus(x1)
+								val numsy = getNumPlus(y1)
+							in
+								(if (numsx > numsy) then 
+									booland (less(x1, x2), less(y1, y2)) else
+									booland (less(y1, y2), less(x1, x2)))
+							end
+						| _ => boolean false
+							)
+				else boolean false
 			end
 		)
-		| (less _, equal _) => boolean false
+		| (less _, equal _) => boolean true
 		| (equal (v1, v2), boolean false) => standardizeBexp(boolor(less(v1,v2), less(v2,v1)))
-		| (equal (v1, v2), less (w1, w2)) => standardizeBexp(boolor(imply(less(v1,v2),less(w1, w2)),imply(less(v2,v1),less(w1, w2))))
+		| (equal (v1, v2), less (w1, w2)) => (
+			let
+				val varsidev = getVarsLHPlus(v1)
+				val numsv = getNumPlus(v1)
+				val varsidew = getVarsLHPlus(w1)
+				val numsw = getNumPlus(w1)
+			in
+				if(varsidev = varsidew andalso v2 = w2) then
+					if numsw <= numsv then
+						boolean true
+					else
+						standardizeBexp(boolnot(equal(v1,v2)))
+				else boolean false
+			end
+		)
 		| (equal (v1, v2), equal (w1, w2)) => if v1=w1 andalso v2=w2 then boolean true else boolean false
 		| (_,_) => if i1 = i2 then boolean true else imply (i1,i2) (*this line never gets called since the recursion is complete; it's just here to avoid warnings*)
 	  end

@@ -82,7 +82,7 @@ structure Loop = struct
 		  else
 		    StepResult{
 				stepdata=[c_stepdata],
-				message="\"skip\" rule cannot be applied because precondition and postcondition do not match.\nTry using the \"str\" rule with Q = " ^ toStringBexp(weakestPrecondition(#2 t, #3 t)) ^ ", the weakest precondition that allows \"skip\" in the next step."
+				message="\"skip\" rule cannot be applied because precondition and postcondition do not match.\nTry using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"skip\" in the next step."
 			  }
 	  | ("assign", _) => (*assegnamento*)
 		(case #2 t of
@@ -91,7 +91,7 @@ structure Loop = struct
 				  else
 					StepResult{
 						stepdata=[c_stepdata],
-						message="\"assign\" rule cannot be applied because precondition is not equal to [" ^ (toStringNexp(E)) ^ "/" ^ x ^ "] of postcondition.\nTry using the \"str\" rule with Q = " ^ toStringBexp(weakestPrecondition(#2 t, #3 t)) ^ ", the weakest precondition that allows \"assign\" in the next step."
+						message="\"assign\" rule cannot be applied because precondition is not equal to [" ^ (toStringNexp(E)) ^ "/" ^ x ^ "] of postcondition.\nTry using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"assign\" in the next step."
 					  }
 			| _ => StepResult{
 			stepdata=[c_stepdata],
@@ -123,6 +123,24 @@ structure Loop = struct
 						message=""
 					  }
 		end
+	  | ("while", (pre, whileDo(cond, prog), post)) => (*regola WHILE*)
+	    if (standardizeBexp(post) = standardizeBexp(booland(pre, boolnot(cond)))) then
+		  StepResult{
+			  stepdata=[StepData{ (*aggiunge le premesse del programma while da dimostrare*)
+				triple=(booland(pre, cond), prog, pre),
+				rule=Rule{
+					premises = [ptriple (selectedtriple (booland(pre, cond), prog, pre))],
+					conclusion = normaltriple t
+				},
+				Q=NONE
+			  }
+			  ],
+			  message=""}
+		  else
+		    StepResult{
+				stepdata=[c_stepdata],
+				message="\"while\" rule cannot be applied because postcondition is not equal to P & ~Q."
+			  }
 	  | ("comp", _) => (*;*)
 	  (case q of
         NONE =>
@@ -243,7 +261,9 @@ structure Loop = struct
 				   else if input="comp" andalso programType(#2 c_triple) = "comp" then
 					  let
 						  val _ = case (#2 c_triple) of
-							concat (_, b) => print("\nTry using the weakest precondition of the final program: Q = " ^ toStringBexp(weakestPrecondition(b, #3 c_triple)) ^ "\n")
+							concat (_, b) => (case weakestPrecondition(b, #3 c_triple) of
+								SOME wp => print("\nTry using the weakest precondition of the final program: Q = " ^ toStringBexp(wp) ^ "\n")
+								| _ => ())
 							| _ => ()
 						  
 						  val _ = print("\n" ^ toStringRule(Rule{
