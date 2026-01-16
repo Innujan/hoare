@@ -75,7 +75,56 @@ structure Loop = struct
 			stepdata=[c_stepdata],
 			message="Invalid Q: " ^ toStringBexp(q) ^ " => " ^ toStringBexp(#3 t) ^ " is not true."
 		  })
-		  (* TODO add AND and OR inference rules!!!!!!!!!!!!!!!!!!!!!! *)
+	  | ("and", (pre, program, post)) => 
+		(case getBoolAnd(post) of
+		SOME (b1,b2) => StepResult{
+			  stepdata=[StepData{ (*aggiunge le premesse del programma and da dimostrare*)
+				triple=(pre, program, b1),
+				rule=Rule{
+					premises = [ptriple (normaltriple (pre, program, b1)), ptriple (selectedtriple (pre, program, b2))],
+					conclusion = normaltriple t
+				},
+				Q=NONE
+			  },
+			  StepData{
+				triple=(pre, program, b2),
+				rule=Rule{
+					premises = [ptriple (selectedtriple (pre, program, b1)), ptriple (normaltriple (pre, program, b2))],
+					conclusion = normaltriple t
+				},
+				Q=NONE
+			  }],
+			message=""
+		  }
+		| NONE => StepResult{
+			stepdata=[c_stepdata],
+			message="Postcondition is not a sequence of ands."
+		  })
+	  | ("or",(pre, program, post)) => 
+		(case getBoolOr(pre) of
+		SOME (b1,b2) => StepResult{
+			  stepdata=[StepData{ (*aggiunge le premesse del programma or da dimostrare*)
+				triple=(b1, program, post),
+				rule=Rule{
+					premises = [ptriple (normaltriple (b1, program, post)), ptriple (selectedtriple (b2, program, post))],
+					conclusion = normaltriple t
+				},
+				Q=NONE
+			  },
+			  StepData{
+				triple=(b2, program, post),
+				rule=Rule{
+					premises = [ptriple (selectedtriple (b1, program, post)), ptriple (normaltriple (b2, program, post))],
+					conclusion = normaltriple t
+				},
+				Q=NONE
+			  }],
+			message=""
+		  }
+		| NONE => StepResult{
+			stepdata=[c_stepdata],
+			message="Precondition is not a sequence of ors."
+		  })
 	  | ("skip", _) => (*regola SKIP*)
 		  if (standardizeBexp(#1 t) = standardizeBexp(#3 t)) then (*se vero, allora la precondizione e la postcondizione sono uguali e quindi la tripla corrisponde all'assioma dello skip*)
 		    completed

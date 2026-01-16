@@ -29,4 +29,11 @@ structure Datatypes = struct
   fun boolnot(b: Bexp) = imply(b, boolean(false))
   fun boolor(b1: Bexp, b2: Bexp) = imply(boolnot(b1), b2)
   fun booland(b1: Bexp,b2: Bexp) = boolnot(imply(b1, boolnot(b2)))
+
+  fun getBoolAnd (imply(imply(b1, imply(b2, boolean false)), boolean false)) = SOME (b1, b2)
+    | getBoolAnd _ = NONE
+	
+  fun getBoolOr (imply (imply(b1, boolean false),b2)) = SOME (b1, b2)
+    | getBoolOr _ = NONE
+
 end
