@@ -29,4 +29,15 @@ structure Utils = struct
       in
         sortString smaller @ [x] @ sortString larger
       end
+
+  fun flattenVars n =
+	  let
+		fun aux nexp acc =
+		  case nexp of
+			  var x => x :: acc
+			| plus(l,r) => aux l (aux r acc)
+			| num _ => acc
+	  in
+		aux n []
+	  end
 end

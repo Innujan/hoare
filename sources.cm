@@ -3,6 +3,7 @@ Group is
     imp/datatypes.sml
 	imp/utils.sml
 	syntax/prettyprint.sml
+	imp/fourier-motzkin.sml
 	imp/standardization.sml
 	imp/substitution.sml
 	imp/weakestprecondition.sml

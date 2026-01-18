@@ -17,6 +17,14 @@ structure PrettyPrint = struct
 	| less (n1,n2) => toStringNexp(n1) ^ " < " ^ toStringNexp(n2)
 	| equal (n1,n2) => toStringNexp(n1) ^ " = " ^ toStringNexp(n2)
 
+  fun toStringDNF(dnf: DNF) : string =
+    let
+      fun regionToString (r: Region) =
+        "[" ^ String.concatWith ", " (List.map toStringBexp r) ^ "]"
+    in
+      "[" ^ String.concatWith ", " (List.map regionToString dnf) ^ "]"
+    end
+
   fun toStringProgram(p: Program) =
     case p of 
 	  skip => "skip"

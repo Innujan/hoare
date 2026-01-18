@@ -44,110 +44,191 @@ structure Standardization = struct
 	  in
 		rebuild (collect n)
 	  end
+	  
+  fun getVarsLHPlus(v) = case v of
+	(plus (s, num n)) => SOME s
+	| num n => NONE
+	| _ => SOME v
+  fun getNumPlus(v) = case v of
+	(plus (s, num n)) => n
+	| num n => n
+	| _ => 0
 
-  fun standardizeBexp(b: Bexp) =
-    case b of
-	  boolean _ => b
-	| imply (b1,b2) =>
+  fun negLit (less (a,b)) = less (b,a)
+    | negLit _ = raise Fail "negLit: non-less literal"
+
+  fun negateClause (c : Region) : DNF =
+    map (fn lit => [negLit lit]) c
+	
+  fun negateDNF (dnf : DNF) : DNF =
 	  let
-	    val i1 = standardizeBexp(b1)
-		val i2 = standardizeBexp(b2)
-		fun getVarsLHPlus(v) = case v of
-			(plus (s, num n)) => SOME s
-			| num n => NONE
-			| _ => SOME v
-		fun getNumPlus(v) = case v of
-			(plus (s, num n)) => n
-			| num n => n
-			| _ => 0
+		(* Cartesian product of two DNFs *)
+		fun cross (d1 : DNF, d2 : DNF) : DNF =
+		  List.concat (map (fn c1 => map (fn c2 => c1 @ c2) d2) d1)
+
+		(* helper to remove duplicate literals within a clause *)
+		fun uniqClause clause =
+		  let
+			fun insert x [] = [x]
+			  | insert x (y::ys) =
+				  if x = y then y::ys
+				  else y :: insert x ys
+		  in
+			List.foldl (fn (lit, acc) => insert lit acc) [] clause
+		  end
+
+		(* remove duplicate clauses from DNF *)
+		fun uniqDNF dnf =
+		  let
+			fun insert c [] = [c]
+			  | insert c (c'::rest) =
+				  if c = c' then c'::rest
+				  else c' :: insert c rest
+		  in
+			List.foldl (fn (clause, acc) => insert clause acc) [] dnf
+		  end
 	  in
-	    case (i1,i2) of
-          (boolean true,b) => b
-        | (boolean false,_) => boolean true
-		| (_,boolean true) => boolean true
-		| (less (v1, v2), boolean false) => standardizeBexp(less(v2,plus(v1,num 1)))
-		| (less (v1, v2), less (w1, w2)) => (
-			let
-				val varsidev = getVarsLHPlus(v1)
-				val numsv = getNumPlus(v1)
-				val varsidew = getVarsLHPlus(w1)
-				val numsw = getNumPlus(w1)
-			in
-				if(varsidev = varsidew andalso v2 = w2) then
-					if numsw <= numsv then
-						boolean true
-					else
-						(case (standardizeBexp(less(v1,v2)),standardizeBexp(less(plus(w2, num ~1),w1))) of
-						(less(x1, x2), less(y1, y2)) => 
-							let
-								val numsx = getNumPlus(x1)
-								val numsy = getNumPlus(y1)
-							in
-								(if (numsx > numsy) then 
-									booland (less(x1, x2), less(y1, y2)) else
-									booland (less(y1, y2), less(x1, x2)))
-							end
-						| _ => boolean false
-							)
-				else boolean false
-			end
-		)
-		| (less _, equal _) => boolean true
-		| (equal (v1, v2), boolean false) => standardizeBexp(boolor(less(v1,v2), less(v2,v1)))
-		| (equal (v1, v2), less (w1, w2)) => (
-			let
-				val varsidev = getVarsLHPlus(v1)
-				val numsv = getNumPlus(v1)
-				val varsidew = getVarsLHPlus(w1)
-				val numsw = getNumPlus(w1)
-			in
-				if(varsidev = varsidew andalso v2 = w2) then
-					if numsw <= numsv then
-						boolean true
-					else
-						standardizeBexp(boolnot(equal(v1,v2)))
-				else boolean false
-			end
-		)
-		| (equal (v1, v2), equal (w1, w2)) => if v1=w1 andalso v2=w2 then boolean true else boolean false
-		| (_,_) => if i1 = i2 then boolean true else imply (i1,i2) (*this line never gets called since the recursion is complete; it's just here to avoid warnings*)
+		case dnf of
+			[] => [[]]
+		  | _ =>
+			  let
+				val raw = foldl (fn (clause, acc) => cross (negateClause clause, acc)) [[]] dnf
+				val cleanedClauses = List.map uniqClause raw
+			  in
+				uniqDNF cleanedClauses
+			  end
 	  end
+
+	
+  fun standardizeBexp(b: Bexp) : DNF =
+    case b of
+	  boolean true => [[]]
+	| boolean false => []
+    | imply (b1,b2) =>
+      let
+        val dnf1 = standardizeBexp(b1)
+        val dnf2 = standardizeBexp(b2)
+      in
+        (negateDNF(dnf1)) @ dnf2
+      end
 	| less (n1,n2) =>
 	  let
 	    val v1 = standardizeNexp(n1)
 		val v2 = standardizeNexp(n2)
 	  in
-	    case (v1,v2) of
-		  (num m,num n) => boolean (m<n)
-		| (_,num n) => less (standardizeNexp(plus(v1,num (~n))),standardizeNexp(plus(v2,num (~n)))) (*moves numbers to lhs*)
-		| (_,plus(_, num n)) => less (standardizeNexp(plus(v1,num (~n))),standardizeNexp(plus(v2,num (~n)))) (*moves numbers to lhs*)
-		| (_,_) => less (v1,v2)
+	    [[ less (v1,v2) ]]
 	  end
 	| equal (n1,n2) =>
 	  let
-		val ns = 
-		  let
-			val v1 = standardizeNexp(n1)
-			val v2 = standardizeNexp(n2)
-		  in
-			case (v1,v2) of
-			  (num m,num n) => boolean (m=n)
-			| (_,num n) => equal (standardizeNexp(plus(v1,num (~n))),standardizeNexp(plus(v2,num (~n)))) (*moves numbers to lhs*)
-			| (_,plus(_, num n)) => equal (standardizeNexp(plus(v1,num (~n))),standardizeNexp(plus(v2,num (~n)))) (*moves numbers to lhs*)
-			| (_,_) => equal (v1,v2)
-		  end
+		val v1 = standardizeNexp(n1)
+		val v2 = standardizeNexp(n2)
 	  in
-	    case ns of
-		  equal (plus(s1, num n),v2) => if n<0 then equal (standardizeNexp(plus(v2, num (~n))), s1) else ns (*standardizes sides of equal; standardizeNexp is needed for crazy x-n=0 case*)
-		| _ => ns
+	    [[ less (standardizeNexp(plus(v1,num (~1))),v2), less (standardizeNexp(plus(v2,num (~1))),v1) ]]
 	  end
 	
-  fun standardizeProgram(p: Program) =
-    case p of
-	  skip => skip
-	| concat (p1,p2) => concat (standardizeProgram(p1),standardizeProgram(p2))
-    | assign (x,n) =>  assign (x,standardizeNexp(n))
-	| ifThenElse (b,p1,p2) => ifThenElse (standardizeBexp(b),standardizeProgram(p1),standardizeProgram(p2))
-	| whileDo (b,p) => whileDo(standardizeBexp(b),standardizeProgram(p))
+	
+  fun standardizeBexpOpt (b: Bexp, maxClauses: int) : DNF option =
+      (* SAFE VERSION *)
+	  let
+		fun std b =
+		  case b of
+			  boolean true => SOME [[]]
+			| boolean false => SOME []
+			| imply (b1,b2) =>
+				(case (std b1, std b2) of
+					(SOME dnf1, SOME dnf2) =>
+					  let
+						fun sizeCross d1 d2 = List.length d1 * List.length d2
+						fun safeCross d1 d2 =
+						  if sizeCross d1 d2 > maxClauses then NONE
+						  else SOME (List.concat (map (fn c1 => map (fn c2 => c1 @ c2) d2) d1))
+					  in
+						(case safeCross (map (fn lit => [lit]) (List.concat dnf1)) [[]] of
+							NONE => NONE
+						  | SOME negatedDnf1 => SOME (negatedDnf1 @ dnf2))
+					  end
+				  | _ => NONE)
+			| less (n1,n2) =>
+				SOME [[ less (standardizeNexp n1, standardizeNexp n2) ]]
+			| equal (n1,n2) =>
+				let
+				  val v1 = standardizeNexp n1
+				  val v2 = standardizeNexp n2
+				in
+				  SOME [[ less (plus(v1,num(~1)),v2), less (plus(v2,num(~1)),v1) ]]
+				end
+	  in
+		std b
+	  end
+
+
+
+	fun varsInNexp n =
+	  case getVarsLHPlus n of
+		NONE => []
+	  | SOME v => flattenVars v
+
+	fun allVarsRegion (r : Region) : string list =
+	  let
+		val vars = List.concat (List.map (fn
+		  less(a,b) => varsInNexp a @ varsInNexp b
+		| _ => raise Fail "allVarsRegion: non-less expression"
+		) r)
+
+		fun insertSorted x [] = [x]
+		  | insertSorted x (y::ys) =
+			  if x = y then y::ys
+			  else if x < y then x::y::ys
+			  else y :: insertSorted x ys
+
+		fun uniqueSorted lst = List.foldl (fn (x, acc) => insertSorted x acc) [] lst
+	  in
+		uniqueSorted vars
+	  end
+
+
+	fun lessToIneq (varOrder : string list) (less(a,b)) : FourierMotzkin.inequality =
+	  let
+		val lhsVars = varsInNexp a
+		val rhsVars = varsInNexp b
+
+		fun countOcc v lst = List.foldl (fn (x,acc) => if x=v then acc+1 else acc) 0 lst
+
+		val coeffs = List.map (fn v => 
+		  let
+			val c = countOcc v lhsVars - countOcc v rhsVars
+		  in
+			FourierMotzkin.C c
+		  end
+		) varOrder
+
+		val rhs = getNumPlus b - getNumPlus a
+	  in
+		FourierMotzkin.I { coeffs = coeffs, rhs = rhs }
+	  end
+
+	fun regionToFM (r : Region) : FourierMotzkin.inequality list =
+	  let
+		val vars = allVarsRegion r
+	  in
+		List.map (fn
+		  less(a,b) => lessToIneq vars (less(a,b))
+		| _ => raise Fail "regionToFM: non-less expression"
+		) r
+	  end
+
+	fun isRegionEmpty (r : Region) : bool =
+	  FourierMotzkin.isEmpty (regionToFM r)
+
+
+  fun BexpImplies (A : Bexp, B : Bexp) : bool =
+    let
+      val dnf = standardizeBexp(booland(A, boolnot(B)))
+    in
+      List.all (fn (region : Region) => isRegionEmpty region) dnf
+    end
+	
+  fun BexpEqual (A : Bexp, B : Bexp) : bool =
+    BexpImplies(A, B) andalso BexpImplies(B, A)
 	  
 end

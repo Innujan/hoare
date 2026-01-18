@@ -35,5 +35,9 @@ structure Datatypes = struct
 	
   fun getBoolOr (imply (imply(b1, boolean false),b2)) = SOME (b1, b2)
     | getBoolOr _ = NONE
+	
+	
+  type Region = Bexp list (* dnf region *)
+  type DNF = Region list
 
 end
