@@ -2,9 +2,9 @@ Group is
     $/basis.cm      
     imp/datatypes.sml
 	imp/utils.sml
-	syntax/prettyprint.sml
 	imp/fourier-motzkin.sml
 	imp/standardization.sml
+	syntax/prettyprint.sml
 	imp/substitution.sml
 	imp/weakestprecondition.sml
 	syntax/parser.sml
