@@ -45,6 +45,7 @@ structure Standardization = struct
 		rebuild (collect n)
 	  end
 
+	  
   fun standardizeBexp(b: Bexp) =
     case b of
 	  boolean _ => b
@@ -141,7 +142,71 @@ structure Standardization = struct
 		  equal (plus(s1, num n),v2) => if n<0 then equal (standardizeNexp(plus(v2, num (~n))), s1) else ns (*standardizes sides of equal; standardizeNexp is needed for crazy x-n=0 case*)
 		| _ => ns
 	  end
-	
+
+
+  fun stdDNF(exp: Bexp) : (Bexp list) list =
+    let
+      val stdExp = standardizeBexp(exp)
+    in
+      case stdExp of
+        boolean true => [[]]
+      | boolean false => []
+      | less _ => [[stdExp]]
+      | equal _ => [[stdExp]]
+      | imply(b1, b2) =>
+          (case (stdExp) of
+            imply(imply(b1, imply(b2, boolean false)), boolean false) =>
+              let
+                val dnf1 = stdDNF(b1)
+                val dnf2 = stdDNF(b2)
+              in
+                List.concat (
+                  map (fn c1 => 
+                    map (fn c2 => c1 @ c2) dnf2
+                  ) dnf1
+                )
+              end
+            | imply(imply(b1, boolean false), b2) =>
+                let
+                  val dnf1 = stdDNF(b1)
+                  val dnf2 = stdDNF(b2)
+                in
+                  dnf1 @ dnf2  
+                end
+            | imply(b, boolean false) =>
+                let
+                  val dnf = stdDNF(b)
+                in
+                  map (fn clause => map (fn lit => boolnot(lit)) clause) dnf
+                end
+            | imply(b1, b2) =>
+                let
+                  val negB1DNF = stdDNF(boolnot(standardizeBexp(b1)))
+                  val b2DNF = stdDNF(b2)
+                in
+                  negB1DNF @ b2DNF
+                end
+            | _ => [[stdExp]]
+          )
+    end 
+
+
+  fun compareBexpDNF(b1: Bexp, b2: Bexp) : bool =
+    let
+      val dnf1 = stdDNF(b1)
+      val dnf2 = stdDNF(b2)
+      
+      fun eqBexpList([], []) = true
+        | eqBexpList(x::xs, y::ys) = x = y andalso eqBexpList(xs, ys)
+        | eqBexpList(_, _) = false
+      
+      fun eqDNF([], []) = true
+        | eqDNF(c1::rest1, c2::rest2) = eqBexpList(c1, c2) andalso eqDNF(rest1, rest2)
+        | eqDNF(_, _) = false
+    in
+      eqDNF(dnf1, dnf2)
+    end
+
   fun standardizeProgram(p: Program) =
     case p of
 	  skip => skip
@@ -149,5 +214,6 @@ structure Standardization = struct
     | assign (x,n) =>  assign (x,standardizeNexp(n))
 	| ifThenElse (b,p1,p2) => ifThenElse (standardizeBexp(b),standardizeProgram(p1),standardizeProgram(p2))
 	| whileDo (b,p) => whileDo(standardizeBexp(b),standardizeProgram(p))
-	  
+
+
 end

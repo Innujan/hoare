@@ -16,7 +16,7 @@ structure Loop = struct
 	if List.exists (fn y => rule = y) ["skip", "assign", "if", "while", "comp"] andalso programType(#2 t) <> rule then StepResult{stepdata=[c_stepdata],message="\"" ^ rule ^ "\" rule cannot be applied because program is of type \"" ^ programType(#2 t) ^ "\"."} else
 	  case (rule, t) of
 	    ("true", _) =>
-		  if ((standardizeBexp(#3 t)) = boolean(true)) then completed else StepResult{
+		  if (compareBexpDNF(#3 t, boolean true)) then completed else StepResult{
 			stepdata=[c_stepdata],
 			message="\"true\" rule cannot be applied because postcondition is not true."
 		  }
@@ -33,7 +33,7 @@ structure Loop = struct
 			message="Q not provided."
 		  }
 		| SOME q =>
-            if(standardizeBexp(imply(#1 t, q))=boolean(true))then
+            if(compareBexpDNF(imply(#1 t, q), boolean true))then
 			StepResult{
 			  stepdata=[StepData{
 				triple=(q,#2 t,#3 t),
@@ -58,7 +58,7 @@ structure Loop = struct
 			message="Q not provided."
 		  }
 		| SOME q =>
-            if(standardizeBexp(imply(q, #3 t))=boolean(true))then
+            if(compareBexpDNF(imply(q, #3 t), boolean true))then
 			StepResult{
 			  stepdata=[StepData{
 				triple=(#1 t,#2 t,q),
@@ -135,7 +135,7 @@ structure Loop = struct
 			  }
 	  | ("assign", _) => (*assegnamento*)
 		(case #2 t of
-			assign (var x, E) => if (standardizeBexp(#1 t) = standardizeBexp(replaceVarBexp(#3 t, x, E))) then
+			assign (var x, E) => if (compareBexpDNF(#1 t, replaceVarBexp(#3 t, x, E))) then
 					completed
 				  else
 					StepResult{
@@ -173,7 +173,7 @@ structure Loop = struct
 					  }
 		end
 	  | ("while", (pre, whileDo(cond, prog), post)) => (*regola WHILE*)
-	    if (standardizeBexp(post) = standardizeBexp(booland(pre, boolnot(cond)))) then
+	    if (compareBexpDNF(post, booland(pre, boolnot(cond)))) then
 		  StepResult{
 			  stepdata=[StepData{ (*aggiunge le premesse del programma while da dimostrare*)
 				triple=(booland(pre, cond), prog, pre),
