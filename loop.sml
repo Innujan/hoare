@@ -294,7 +294,7 @@ structure Loop = struct
   fun requestBexpOperation() =
 	let
 		val _ = print "Choose a boolean expression:\n"
-		val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "and", "or", "<", "=", "≥", "imply", "not"])))
+		val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "and", "or", "<", "=", geqChar, "imply", "not"])))
 		val _ = print "\n> "
 		val input : string =
 			case TextIO.inputLine TextIO.stdIn of
@@ -342,9 +342,9 @@ structure Loop = struct
 			end
 		| ">=" => 
 			let
-				val _ = print ("Input the first operand of the _ ≥ _:\n> ")
-				val n1 = requestNexpOperation("", "≥ _")
-				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " ≥ _ :\n> ")
+				val _ = print ("Input the first operand of the _ " ^ geqChar ^ " _:\n> ")
+				val n1 = requestNexpOperation("", geqChar ^ " _")
+				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " " ^ geqChar ^ " _ :\n> ")
 				val n2 = requestNexpOperation("", "")
 			in
 				"not(less(" ^ n1 ^ ", " ^ n2 ^ "))"

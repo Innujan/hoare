@@ -1,6 +1,10 @@
 structure PrettyPrint = struct
   open Datatypes
 
+  
+  val iswindows = (OS.Process.system "ver" = OS.Process.success) (* ver command only exists in windows *)
+  
+  
   fun toStringNexp(n: Nexp) =
 	case n of 
 	  num n => Int.toString(n)
@@ -8,11 +12,13 @@ structure PrettyPrint = struct
   | plus (n1, num n2) => if n2 < 0 then toStringNexp(n1) ^ " - " ^ Int.toString(~n2) else toStringNexp(n1) ^ " + " ^ Int.toString(n2)
 	| plus (n1,n2) => toStringNexp(n1) ^ " + " ^ toStringNexp(n2)
 
+  val geqChar =  if iswindows then ">="  (* ASCII *) else "≥" (* Unicode *)
+  
   fun toStringBexp(b: Bexp) =
 	case b of 
 	  boolean b => Bool.toString(b)
     | imply (imply (p,imply (q,boolean false)),boolean false) => "(" ^ toStringBexp(p) ^ " & " ^ toStringBexp(q) ^ ")"   (* P ∧ Q *)
-    | imply (less(n1, n2), boolean false) => toStringNexp(n1) ^ " ≥ " ^ toStringNexp(n2)
+    | imply (less(n1, n2), boolean false) => toStringNexp(n1) ^ " " ^ geqChar ^ " " ^ toStringNexp(n2)
     | imply (b1,boolean false) => "~" ^ toStringBexp(b1)  (* ¬P *)
     | imply (imply(p, boolean false),b2) => "(" ^ toStringBexp(p) ^ " | " ^ toStringBexp(b2) ^ ")" (* P ∨ Q *)
     | imply (b1,b2) => "(" ^ toStringBexp(b1) ^ " => " ^ toStringBexp(b2) ^ ")"
@@ -39,13 +45,7 @@ structure PrettyPrint = struct
   fun toStringImplication(i: implication) = toStringBexp(#1 i) ^ " => " ^ toStringBexp(#2 i);
   fun toStringPremise (premise: Premise) = case premise of pimplication(p, q) => toStringImplication(p, q) | ptriple(t) => (case t of selectedtriple t => ("\u001b[1;31m" ^ toStringTriple(t) ^ "\u001b[0m")| normaltriple t => toStringTriple(t)) | pdummy (t) => t
   
-  
-  
-	val lineChar = 
-		if (OS.Process.system "ver" = OS.Process.success) then (* ver command only exists in windows *)
-			String.implode [Char.chr 196]  (* CP437 *)
-		else
-			"─"          (* Unicode *)
+  val lineChar =  if iswindows then String.implode [Char.chr 196]  (* CP437 *) else "─" (* Unicode *)
 			
   fun toStringRule (Rule {premises, conclusion} ) =
     let
