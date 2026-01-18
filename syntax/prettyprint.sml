@@ -14,16 +14,27 @@ structure PrettyPrint = struct
 
   val geqChar =  if iswindows then ">="  (* ASCII *) else "≥" (* Unicode *)
   
+  fun standardizeDiseqFmt(n1: Nexp, n2: Nexp, s: string) = 
+	let
+		val n1 = Standardization.standardizeNexp(n1)
+		val n2 = Standardization.standardizeNexp(n2)
+	in
+		case n1 of
+			plus (_, num n) => toStringNexp (Standardization.standardizeNexp(plus (n1, num (~n)))) ^ " " ^ s ^ " " ^ toStringNexp (Standardization.standardizeNexp(plus (n2, num (~n))))
+		  | num n => toStringNexp (Standardization.standardizeNexp(plus (n1, num (~n)))) ^ " " ^ s ^ " " ^ toStringNexp (Standardization.standardizeNexp(plus (n2, num (~n))))
+		  | _ => toStringNexp(n1) ^ " " ^ s ^ " " ^ toStringNexp(n2)
+	end
+  
   fun toStringBexp(b: Bexp) =
 	case b of 
 	  boolean b => Bool.toString(b)
     | imply (imply (p,imply (q,boolean false)),boolean false) => "(" ^ toStringBexp(p) ^ " & " ^ toStringBexp(q) ^ ")"   (* P ∧ Q *)
-    | imply (less(n1, n2), boolean false) => toStringNexp(n1) ^ " " ^ geqChar ^ " " ^ toStringNexp(n2)
+    | imply (less(n1, n2), boolean false) => standardizeDiseqFmt(n1, n2, geqChar)
     | imply (b1,boolean false) => "~" ^ toStringBexp(b1)  (* ¬P *)
     | imply (imply(p, boolean false),b2) => "(" ^ toStringBexp(p) ^ " | " ^ toStringBexp(b2) ^ ")" (* P ∨ Q *)
     | imply (b1,b2) => "(" ^ toStringBexp(b1) ^ " => " ^ toStringBexp(b2) ^ ")"
-	| less (n1,n2) => toStringNexp(n1) ^ " < " ^ toStringNexp(n2)
-	| equal (n1,n2) => toStringNexp(n1) ^ " = " ^ toStringNexp(n2)
+	| less (n1,n2) => standardizeDiseqFmt(n1, n2, "<")
+	| equal (n1,n2) => standardizeDiseqFmt(n1, n2, "=")
 
   fun toStringDNF(dnf: DNF) : string =
     let
