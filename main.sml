@@ -54,7 +54,12 @@ structure Main = struct
     (*Input integrato da file a parte*)
   fun main (progName, args) =
     let
-      val test_triple : triple = tripleFromFile "input.txt" handle _ => 
+      val input = 
+        case args of
+          [] => NONE
+        | [filename] => SOME filename
+        | _ => raise Fail "invalid arguments"
+      val test_triple : triple = tripleFromFile (case input of SOME f => f | NONE => "") handle _ => 
                 (print ("Unable to open input file\n"); raise Fail "unable to open input file")
 
       val stepData = StepData {

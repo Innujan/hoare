@@ -5,12 +5,14 @@ structure PrettyPrint = struct
 	case n of 
 	  num n => Int.toString(n)
 	| var n => n
+  | plus (n1, num n2) => if n2 < 0 then toStringNexp(n1) ^ " - " ^ Int.toString(~n2) else toStringNexp(n1) ^ " + " ^ Int.toString(n2)
 	| plus (n1,n2) => toStringNexp(n1) ^ " + " ^ toStringNexp(n2)
 
   fun toStringBexp(b: Bexp) =
 	case b of 
 	  boolean b => Bool.toString(b)
     | imply (imply (p,imply (q,boolean false)),boolean false) => "(" ^ toStringBexp(p) ^ " & " ^ toStringBexp(q) ^ ")"   (* P ∧ Q *)
+    | imply (less(n1, n2), boolean false) => toStringNexp(n1) ^ " ≥ " ^ toStringNexp(n2)
     | imply (b1,boolean false) => "~" ^ toStringBexp(b1)  (* ¬P *)
     | imply (imply(p, boolean false),b2) => "(" ^ toStringBexp(p) ^ " | " ^ toStringBexp(b2) ^ ")" (* P ∨ Q *)
     | imply (b1,b2) => "(" ^ toStringBexp(b1) ^ " => " ^ toStringBexp(b2) ^ ")"

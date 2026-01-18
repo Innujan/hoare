@@ -240,12 +240,143 @@ structure Loop = struct
   (*funzione che chiede all'utente di applicare ricorsivamente le regole*)
   (*d'inferenza sulla tripla in cima a uno stack di triple, dimostrandole ricorsivamente*)
   
+
+  fun requestNexpOperation(pre: string, post: string) =
+	let
+		val _ = print "Choose a numeric expression:\n"
+		val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["var", "num", "plus"])))
+		val _ = print "\n> "
+		val input : string =
+			case TextIO.inputLine TextIO.stdIn of
+				NONE => ""
+			  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
+	in
+		case input of
+		  "var" => 
+			let
+				val _ = print ("Input the variable name:\n> ")
+				val vname : string =
+					case TextIO.inputLine TextIO.stdIn of
+						NONE => ""
+					  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
+			in
+				"var(" ^ vname ^ ")"
+			end
+		| "num" => 
+			let
+				val _ = print ("Input the integer value:\n> ")
+				val vnum : string =
+					case TextIO.inputLine TextIO.stdIn of
+						NONE => ""
+					  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
+			in
+				"num(" ^ vnum ^ ")"	
+			end
+		| "plus" => 
+			let
+				val _ = print ("Input the first (+) operand of " ^ pre ^ " _ + _ "^ post ^ ":\n> ")
+				val n1 = requestNexpOperation(pre, "+ _ " ^ post)
+				val pre = pre ^ toStringNexp(NexpFromString n1)
+				val _ = print ("\nInput the second (+) operand of "^ pre ^ " + _ " ^ post ^ ":\n> ")
+				val n2 = requestNexpOperation(pre, post)
+			in
+				"plus(" ^ n1 ^ ", " ^ n2 ^ ")"
+			end
+		| _ => 
+			let
+				val _ = print ("Invalid input!\n> ")
+			in
+				requestNexpOperation(pre, post)
+			end
+	end
+
+
+  fun requestBexpOperation() =
+	let
+		val _ = print "Choose a boolean expression:\n"
+		val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "and", "or", "<", "=", "≥", "imply", "not"])))
+		val _ = print "\n> "
+		val input : string =
+			case TextIO.inputLine TextIO.stdIn of
+				NONE => ""
+			  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
+	in
+		case input of
+		  "true" => "boolean(true)"
+		| "false" => "boolean(false)"
+		| "and" => 
+			let
+				val _ = print ("Input the first operand of the _ & _:\n> ")
+				val b1 = requestBexpOperation()
+				val _ = print ("\nInput the second operand of the "^ toStringBexp(BexpFromString b1) ^ " & _ :\n> ")
+				val b2 = requestBexpOperation()
+			in
+				"and(" ^ b1 ^ ", " ^ b2 ^ ")"
+			end
+		| "or" => 
+			let
+				val _ = print ("Input the first operand of the _ | _:\n> ")
+				val b1 = requestBexpOperation()
+				val _ = print ("\nInput the second operand of the "^ toStringBexp(BexpFromString b1) ^ " | _ :\n> ")
+				val b2 = requestBexpOperation()
+			in
+				"or(" ^ b1 ^ ", " ^ b2 ^ ")"
+			end
+		| "<" => 
+			let
+				val _ = print ("Input the first operand of the _ < _:\n> ")
+				val n1 = requestNexpOperation("", "< _")
+				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " < _ :\n> ")
+				val n2 = requestNexpOperation("", "")
+			in
+				"less(" ^ n1 ^ ", " ^ n2 ^ ")"
+			end
+		| "=" => 
+			let
+				val _ = print ("Input the first (=) operand of _ = _:\n> ")
+				val n1 = requestNexpOperation("", " = _")
+				val _ = print ("\nInput the second (=) operand of "^ toStringNexp(NexpFromString n1) ^ " = _ :\n> ")
+				val n2 = requestNexpOperation("", "")
+			in
+				"equal(" ^ n1 ^ ", " ^ n2 ^ ")"
+			end
+		| ">=" => 
+			let
+				val _ = print ("Input the first operand of the _ ≥ _:\n> ")
+				val n1 = requestNexpOperation("", "≥ _")
+				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " ≥ _ :\n> ")
+				val n2 = requestNexpOperation("", "")
+			in
+				"not(less(" ^ n1 ^ ", " ^ n2 ^ "))"
+			end
+		| "imply" => 
+			let
+				val _ = print ("Input the antecedent of the _ => _:\n> ")
+				val b1 = requestBexpOperation()
+				val _ = print ("\nInput the consequent of the "^ toStringBexp(BexpFromString b1) ^ " => _ :\n> ")
+				val b2 = requestBexpOperation()
+			in
+				"imply(" ^ b1 ^ ", " ^ b2 ^ ")"
+			end
+		| "not" => 
+			let
+				val _ = print ("Input the operand of the not(_):\n> ")
+				val b1 = requestBexpOperation()
+			in
+				"not(" ^ b1 ^ ")"
+			end
+		| _ => 
+			let
+				val _ = print ("Invalid input!\n> ")
+			in
+				requestBexpOperation()
+			end
+	end
+
   fun readBexp () =
     let
-        val line =
-            case TextIO.inputLine TextIO.stdIn of
-                 NONE => ""
-               | SOME s => String.extract (s, 0, SOME (String.size s - 1))
+        val line = requestBexpOperation()
+		val _ = print ("\nYou entered: " ^ line ^ "\n")
     in
         BexpFromString line
         handle _ =>

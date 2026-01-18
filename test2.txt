@@ -1,0 +1,5 @@
+equal(var(x), num(1))
+
+assign(var(x), plus(var(x), num(1)))
+
+not(less(var(x), num(1)))
