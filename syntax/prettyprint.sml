@@ -37,7 +37,7 @@ structure PrettyPrint = struct
     | imply (imply(p, boolean false),b2) => "(" ^ toStringBexp(p) ^ " | " ^ toStringBexp(b2) ^ ")" (* P ∨ Q *)
     | imply (b1,b2) => "(" ^ toStringBexp(b1) ^ " => " ^ toStringBexp(b2) ^ ")"
 	| less (n1,n2) => standardizeDiseqFmt(n1, n2, "<")
-	| equal (n1,n2) => standardizeDiseqFmt(n1, n2, "=")
+	| equal (n1,n2) => if n1 <> n2 then standardizeDiseqFmt(n1, n2, "=") else "true"
 
   fun toStringDNF(dnf: DNF) : string =
     let
