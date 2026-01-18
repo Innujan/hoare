@@ -44,15 +44,6 @@ structure Standardization = struct
 	  in
 		rebuild (collect n)
 	  end
-	  
-  fun getVarsLHPlus(v) = case v of
-	(plus (s, num n)) => SOME s
-	| num n => NONE
-	| _ => SOME v
-  fun getNumPlus(v) = case v of
-	(plus (s, num n)) => n
-	| num n => n
-	| _ => 0
 
   fun negLit (less (a,b)) = less (b,a)
     | negLit _ = raise Fail "negLit: non-less literal"

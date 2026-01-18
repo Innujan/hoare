@@ -18,11 +18,14 @@ structure PrettyPrint = struct
 	let
 		val n1 = Standardization.standardizeNexp(n1)
 		val n2 = Standardization.standardizeNexp(n2)
+		val (n1, n2) = case n1 of
+			plus (_, num n) => (Standardization.standardizeNexp(plus (n1, num (~n))), Standardization.standardizeNexp(plus (n2, num (~n))))
+		  | num n => (Standardization.standardizeNexp(plus (n1, num (~n))), Standardization.standardizeNexp(plus (n2, num (~n))))
+		  | _ => (n1,n2)
+		val n2n = Utils.getNumPlus(n2)
+		val (n1, n2) = if n2n < 0 then (Standardization.standardizeNexp(plus (n1, num (~n2n))), Standardization.standardizeNexp(plus (n2, num (~n2n)))) else (n1,n2)
 	in
-		case n1 of
-			plus (_, num n) => toStringNexp (Standardization.standardizeNexp(plus (n1, num (~n)))) ^ " " ^ s ^ " " ^ toStringNexp (Standardization.standardizeNexp(plus (n2, num (~n))))
-		  | num n => toStringNexp (Standardization.standardizeNexp(plus (n1, num (~n)))) ^ " " ^ s ^ " " ^ toStringNexp (Standardization.standardizeNexp(plus (n2, num (~n))))
-		  | _ => toStringNexp(n1) ^ " " ^ s ^ " " ^ toStringNexp(n2)
+	    toStringNexp(n1) ^ " " ^ s ^ " " ^ toStringNexp(n2)
 	end
   
   fun toStringBexp(b: Bexp) =
@@ -30,7 +33,7 @@ structure PrettyPrint = struct
 	  boolean b => Bool.toString(b)
     | imply (imply (p,imply (q,boolean false)),boolean false) => "(" ^ toStringBexp(p) ^ " & " ^ toStringBexp(q) ^ ")"   (* P ∧ Q *)
     | imply (less(n1, n2), boolean false) => standardizeDiseqFmt(n1, n2, geqChar)
-    | imply (b1,boolean false) => "~" ^ toStringBexp(b1)  (* ¬P *)
+    | imply (b1,boolean false) => "not(" ^ toStringBexp(b1) ^ ")"  (* ¬P *)
     | imply (imply(p, boolean false),b2) => "(" ^ toStringBexp(p) ^ " | " ^ toStringBexp(b2) ^ ")" (* P ∨ Q *)
     | imply (b1,b2) => "(" ^ toStringBexp(b1) ^ " => " ^ toStringBexp(b2) ^ ")"
 	| less (n1,n2) => standardizeDiseqFmt(n1, n2, "<")
@@ -54,7 +57,7 @@ structure PrettyPrint = struct
 
   fun toStringTriple(t: triple) = "{" ^ toStringBexp(#1 t) ^ "} " ^ toStringProgram(#2 t) ^ " {" ^  toStringBexp(#3 t) ^ "}";
   fun toStringImplication(i: implication) = toStringBexp(#1 i) ^ " => " ^ toStringBexp(#2 i);
-  fun toStringPremise (premise: Premise) = case premise of pimplication(p, q) => toStringImplication(p, q) | ptriple(t) => (case t of selectedtriple t => ("\u001b[1;31m" ^ toStringTriple(t) ^ "\u001b[0m")| normaltriple t => toStringTriple(t)) | pdummy (t) => t
+  fun toStringPremise (premise: Premise) = case premise of pimplication(p, q) => toStringImplication(p, q) | ptriple(t) => (case t of selectedtriple t => ("\u001b[1;31m" ^ toStringTriple(t) ^ "\u001b[0m")| normaltriple t => toStringTriple(t)) | pdummy (t) => Utils.replaceFirst("%", ("\u001b[1;34mQ\u001b[0m"), t)
   
   val lineChar =  if iswindows then String.implode [Char.chr 196]  (* CP437 *) else "─" (* Unicode *)
 			
@@ -62,7 +65,7 @@ structure PrettyPrint = struct
     let
 		
 		val premiseStrings = List.map toStringPremise premises
-		val premisesLength = List.foldl (fn (s, acc) => String.size s - (if String.size s > 0 andalso String.sub(s,0) = #"\u001b" then 10 else 0) + acc) 0 premiseStrings
+		val premisesLength = List.foldl (fn (s, acc) => String.size s - Utils.countChar(#"\u001b", s) * 5 + acc) 0 premiseStrings
         val c = (case conclusion of selectedtriple t => ("\u001b[1;31m" ^ toStringTriple(t) ^ "\u001b[0m")| normaltriple t => toStringTriple(t))
 		
         val rowwidth = Int.max(64, Int.max(premisesLength + 10, String.size c + 10))

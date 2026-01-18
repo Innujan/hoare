@@ -131,7 +131,7 @@ structure Loop = struct
 		  else
 		    StepResult{
 				stepdata=[c_stepdata],
-				message="\"skip\" rule cannot be applied because precondition and postcondition do not match.\nTry using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"skip\" in the next step."
+				message="\"skip\" rule cannot be applied because precondition and postcondition do not match.\n\n\u001b[1;36m[Tip] Try using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"skip\" in the next step."
 			  }
 	  | ("assign", _) => (*assegnamento*)
 		(case #2 t of
@@ -140,7 +140,7 @@ structure Loop = struct
 				  else
 					StepResult{
 						stepdata=[c_stepdata],
-						message="\"assign\" rule cannot be applied because precondition is not equal to [" ^ (toStringNexp(E)) ^ "/" ^ x ^ "] of postcondition.\nTry using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"assign\" in the next step."
+						message="\"assign\" rule cannot be applied because precondition is not equal to [" ^ (toStringNexp(E)) ^ "/" ^ x ^ "] of postcondition.\n\n\u001b[1;36m[Tip] Try using the \"str\" rule with Q = " ^ toStringBexp(case weakestPrecondition(#2 t, #3 t) of SOME wp => wp | _ => boolean(false)) ^ ", the weakest precondition that allows \"assign\" in the next step."
 					  }
 			| _ => StepResult{
 			stepdata=[c_stepdata],
@@ -260,7 +260,9 @@ structure Loop = struct
 						NONE => ""
 					  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
 			in
-				"var(" ^ vname ^ ")"
+				case vname of
+				  ("back") => NONE
+				| _ => SOME ("var(" ^ vname ^ ")")					
 			end
 		| "num" => 
 			let
@@ -270,28 +272,32 @@ structure Loop = struct
 						NONE => ""
 					  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
 			in
-				"num(" ^ vnum ^ ")"	
+				case vnum of
+				  ("back") => NONE
+				| _ => SOME ("num(" ^ vnum ^ ")")	
 			end
 		| "plus" => 
-			let
-				val _ = print ("Input the first (+) operand of " ^ pre ^ " _ + _ "^ post ^ ":\n> ")
-				val n1 = requestNexpOperation(pre, "+ _ " ^ post)
-				val pre = pre ^ toStringNexp(NexpFromString n1)
-				val _ = print ("\nInput the second (+) operand of "^ pre ^ " + _ " ^ post ^ ":\n> ")
-				val n2 = requestNexpOperation(pre, post)
-			in
-				"plus(" ^ n1 ^ ", " ^ n2 ^ ")"
-			end
+				let
+					val _ = print ("Input the first (+) operand of " ^ pre ^ "\u001b[1;31m_\u001b[0m + _"^ post ^ ":\n")
+					val n1 = requestNexpOperation(pre, " + _ " ^ post)
+					val _ = case n1 of SOME n1 => print ("\nInput the second (+) operand of " ^ pre ^ toStringNexp(NexpFromString n1) ^ " + \u001b[1;31m_\u001b[0m" ^ post ^ ":\n") | _ => ()
+					val n2 = case n1 of SOME n1 => requestNexpOperation(pre ^ toStringNexp(NexpFromString n1) ^ " + ", post) | _ => NONE
+				in
+					case (n1, n2) of
+					  (SOME n1, SOME n2) => SOME ("plus(" ^ n1 ^ ", " ^ n2 ^ ")")
+					| _ => NONE	
+				end
+		| "back" => NONE
 		| _ => 
 			let
-				val _ = print ("Invalid input!\n> ")
+				val _ = print ("Invalid input!\n")
 			in
 				requestNexpOperation(pre, post)
 			end
 	end
 
 
-  fun requestBexpOperation() =
+  fun requestBexpOperation(pre, post) =
 	let
 		val _ = print "Choose a boolean expression:\n"
 		val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "and", "or", "<", "=", geqChar, "imply", "not"])))
@@ -302,85 +308,102 @@ structure Loop = struct
 			  | SOME s => String.extract(s, 0, SOME (String.size s - 1))
 	in
 		case input of
-		  "true" => "boolean(true)"
-		| "false" => "boolean(false)"
+		  "true" => SOME "boolean(true)"
+		| "false" => SOME "boolean(false)"
 		| "and" => 
 			let
-				val _ = print ("Input the first operand of the _ & _:\n> ")
-				val b1 = requestBexpOperation()
-				val _ = print ("\nInput the second operand of the "^ toStringBexp(BexpFromString b1) ^ " & _ :\n> ")
-				val b2 = requestBexpOperation()
+				val _ = print ("Input the first operand of the " ^ pre ^ "\u001b[1;31m_\u001b[0m & _"^ post ^ " expression:\n")
+				val b1 = requestBexpOperation(pre, " & _ " ^ post)
+				val _ = case b1 of SOME b1 => print ("\nInput the second operand of the " ^ pre ^ toStringBexp(BexpFromString b1) ^ " & \u001b[1;31m_\u001b[0m" ^ post ^ " expression:\n") | _ => ()
+				val b2 = case b1 of SOME b1 => requestBexpOperation(pre ^ toStringBexp(BexpFromString b1) ^ " & ", post) | _ => NONE
 			in
-				"and(" ^ b1 ^ ", " ^ b2 ^ ")"
+				case (b1, b2) of
+				  (SOME b1, SOME b2) => SOME ("and(" ^ b1 ^ ", " ^ b2 ^ ")")
+				| _ => NONE
 			end
 		| "or" => 
 			let
-				val _ = print ("Input the first operand of the _ | _:\n> ")
-				val b1 = requestBexpOperation()
-				val _ = print ("\nInput the second operand of the "^ toStringBexp(BexpFromString b1) ^ " | _ :\n> ")
-				val b2 = requestBexpOperation()
+				val _ = print ("Input the first operand of the " ^ pre ^ "\u001b[1;31m_\u001b[0m | _"^ post ^ " expression:\n")
+				val b1 = requestBexpOperation(pre, " | _ " ^ post)
+				val _ = case b1 of SOME b1 => print ("\nInput the second operand of the " ^ pre ^ toStringBexp(BexpFromString b1) ^ " | \u001b[1;31m_\u001b[0m" ^ post ^ " expression:\n") | _ => ()
+				val b2 = case b1 of SOME b1 => requestBexpOperation(pre ^ toStringBexp(BexpFromString b1) ^ " | ", post) | _ => NONE
 			in
-				"or(" ^ b1 ^ ", " ^ b2 ^ ")"
+				case (b1, b2) of
+				  (SOME b1, SOME b2) => SOME ("or(" ^ b1 ^ ", " ^ b2 ^ ")")
+				| _ => NONE
 			end
 		| "<" => 
 			let
-				val _ = print ("Input the first operand of the _ < _:\n> ")
-				val n1 = requestNexpOperation("", "< _")
-				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " < _ :\n> ")
-				val n2 = requestNexpOperation("", "")
+				val _ = print ("Input the first operand of the " ^ pre ^ "\u001b[1;31m_\u001b[0m < _"^ post ^ " expression:\n")
+				val n1 = requestNexpOperation(pre, " < _ " ^ post)
+				val _ = case n1 of SOME n1 => print ("\nInput the second operand of the " ^ pre ^ toStringNexp(NexpFromString n1) ^ " < \u001b[1;31m_\u001b[0m" ^ post ^ " expression:\n") | _ => ()
+				val n2 = case n1 of SOME n1 => requestNexpOperation(pre ^ toStringNexp(NexpFromString n1) ^ " < ", post) | _ => NONE
 			in
-				"less(" ^ n1 ^ ", " ^ n2 ^ ")"
+				case (n1, n2) of
+				  (SOME n1, SOME n2) => SOME ("less(" ^ n1 ^ ", " ^ n2 ^ ")")
+				| _ => NONE				
 			end
 		| "=" => 
 			let
-				val _ = print ("Input the first (=) operand of _ = _:\n> ")
-				val n1 = requestNexpOperation("", " = _")
-				val _ = print ("\nInput the second (=) operand of "^ toStringNexp(NexpFromString n1) ^ " = _ :\n> ")
-				val n2 = requestNexpOperation("", "")
+				val _ = print ("Input the first operand of the " ^ pre ^ "\u001b[1;31m_\u001b[0m = _"^ post ^ " expression:\n")
+				val n1 = requestNexpOperation(pre, " = _ " ^ post)
+				val _ = case n1 of SOME n1 => print ("\nInput the second operand of the " ^ pre ^ toStringNexp(NexpFromString n1) ^ " = \u001b[1;31m_\u001b[0m" ^ post ^ " expression:\n") | _ => ()
+				val n2 = case n1 of SOME n1 => requestNexpOperation(pre ^ toStringNexp(NexpFromString n1) ^ " = ", post) | _ => NONE
 			in
-				"equal(" ^ n1 ^ ", " ^ n2 ^ ")"
+				case (n1, n2) of
+				  (SOME n1, SOME n2) => SOME ("equal(" ^ n1 ^ ", " ^ n2 ^ ")")
+				| _ => NONE	
 			end
 		| ">=" => 
 			let
-				val _ = print ("Input the first operand of the _ " ^ geqChar ^ " _:\n> ")
-				val n1 = requestNexpOperation("", geqChar ^ " _")
-				val _ = print ("\nInput the second operand of the "^ toStringNexp(NexpFromString n1) ^ " " ^ geqChar ^ " _ :\n> ")
-				val n2 = requestNexpOperation("", "")
+				val _ = print ("Input the first operand of the " ^ pre ^ "\u001b[1;31m_\u001b[0m " ^ geqChar ^ " _"^ post ^ " expression:\n")
+				val n1 = requestNexpOperation(pre, " " ^ geqChar ^ " _ " ^ post)
+				val _ = case n1 of SOME n1 => print ("\nInput the second operand of the " ^ pre ^ toStringNexp(NexpFromString n1) ^ " " ^ geqChar ^ " \u001b[1;31m_\u001b[0m" ^ post ^ " expression:\n") | _ => ()
+				val n2 = case n1 of SOME n1 => requestNexpOperation(pre ^ toStringNexp(NexpFromString n1) ^ " " ^ geqChar ^ " ", post) | _ => NONE
 			in
-				"not(less(" ^ n1 ^ ", " ^ n2 ^ "))"
+				case (n1, n2) of
+				  (SOME n1, SOME n2) => SOME ("not(less(" ^ n1 ^ ", " ^ n2 ^ "))")
+				| _ => NONE	
 			end
 		| "imply" => 
 			let
-				val _ = print ("Input the antecedent of the _ => _:\n> ")
-				val b1 = requestBexpOperation()
-				val _ = print ("\nInput the consequent of the "^ toStringBexp(BexpFromString b1) ^ " => _ :\n> ")
-				val b2 = requestBexpOperation()
+				val _ = print ("Input the antecedent of the " ^ pre ^ "\u001b[1;31m_\u001b[0m => _"^ post ^ " implication:\n")
+				val b1 = requestBexpOperation(pre, " => _ " ^ post)
+				val _ = case b1 of SOME b1 => print ("\nInput the consequent of the " ^ pre ^ toStringBexp(BexpFromString b1) ^ " => \u001b[1;31m_\u001b[0m" ^ post ^ " implication:\n") | _ => ()
+				val b2 = case b1 of SOME b1 => requestBexpOperation(pre ^ toStringBexp(BexpFromString b1) ^ " => ", post) | _ => NONE
 			in
-				"imply(" ^ b1 ^ ", " ^ b2 ^ ")"
+				case (b1, b2) of
+				  (SOME b1, SOME b2) => SOME ("imply(" ^ b1 ^ ", " ^ b2 ^ ")")
+				| _ => NONE
 			end
 		| "not" => 
 			let
-				val _ = print ("Input the operand of the not(_):\n> ")
-				val b1 = requestBexpOperation()
+				val _ = print ("Input the operand of the " ^ pre ^ "not(\u001b[1;31m_\u001b[0m)"^ post ^ " expression:\n")
+				val b1 = requestBexpOperation(pre ^ " not(", ") " ^ post)	
 			in
-				"not(" ^ b1 ^ ")"
+				case b1 of
+				  (SOME b1) => SOME ("not(" ^ b1 ^ ")")
+				| _ => NONE
 			end
+		| "back" => NONE
 		| _ => 
 			let
-				val _ = print ("Invalid input!\n> ")
+				val _ = print ("Invalid input!\n")
 			in
-				requestBexpOperation()
+				requestBexpOperation(pre,post)
 			end
 	end
 
   fun readBexp () =
     let
-        val line = requestBexpOperation()
-		val _ = print ("\nYou entered: " ^ line ^ "\n")
+        val line = requestBexpOperation("","")
+		val _ = case line of SOME line => print ("\nYou entered: " ^ line ^ "\n") | _ => ()
     in
-        BexpFromString line
-        handle _ =>
-            ( print "Invalid input!\n> "; readBexp () )
+	    case line of SOME line =>
+			SOME (BexpFromString line
+			handle _ =>
+				( print "Invalid input!\n"; raise Fail "retry" ) )
+		| _ => NONE
     end
   
   fun loop (stepdata : StepData list, original_triple : triple, message : string, prev_stepdata : StepData list list) =
@@ -397,7 +420,7 @@ structure Loop = struct
 			 val _ = print "\n\n"
 			 
 		     val _ = if String.size message > 0 then
-				print (message ^ "\n\n")
+				print ("\u001b[1;33m" ^ message ^ "\u001b[0m\n\n")
 			 else
 				()
 			 
@@ -405,7 +428,7 @@ structure Loop = struct
 			 val _ = print(String.concat(List.map(fn rule => ("  " ^ rule ^ "  "))(["true", "false", "str", "weak", "and", "or", "skip", "assign", "if", "while", "comp"])))
 			 val _ = (case prev_stepdata of
 						  [] => ()
-					    | _ => print "\nOr type undo to undo the previous step")
+					    | _ => print "\nOr type \"undo\" to undo the previous step")
 			 val _ = print "\n> "
 			 
 			 
@@ -419,47 +442,57 @@ structure Loop = struct
 				in 
 			      case (input,prev_stepdata) of 
 					("undo",stepdata :: prev_stepdata ) => loop(stepdata, original_triple, "Last step was undone.", prev_stepdata)
+				  | ("exit",_ ) => OS.Process.exit(OS.Process.success)
 				  | _ => let
 					val q = if List.exists (fn y => input = y) ["str", "weak"] then
 					  let 
+						 val _ = print "\u001b[2J\u001b[H"; (*cls*)
+						 val _ = print "Original triple:\n"
+						 val _ = print ("  " ^ toStringTriple(original_triple) ^ "\n\n")
+						 val _ = print "Current derivation step:\n"
 						  val _ = print("\n" ^ toStringRule(Rule{
-							premises = if input="str" then 	[pdummy (toStringBexp(#1 c_triple) ^ " => Q"), pdummy ("{Q} " ^ toStringProgram(#2 c_triple) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")] else 
-															[pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(#2 c_triple) ^ " {Q}"), pdummy ("Q => " ^ toStringBexp(#3 c_triple))],
-							conclusion = normaltriple c_triple
+							premises = if input="str" then 	[pdummy (toStringBexp(#1 c_triple) ^ " => %"), pdummy ("{%} " ^ toStringProgram(#2 c_triple) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")] else 
+															[pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(#2 c_triple) ^ " {%}"), pdummy ("% => " ^ toStringBexp(#3 c_triple))],
+							conclusion = selectedtriple c_triple
 						  }))
-						  val _ = print "\n\nInput Q to continue:\n> "
+						  val _ = print "\n\nInput Q to continue or \"back\" to select a different rule\n\n"
 					  in 
 
 						let
 							val input = readBexp ()
-							val _ = print (toStringBexp input)
+							val _ = case input of SOME input => print (toStringBexp input) | _ => ()
 						in
-							SOME input
+							input
 						end
 
 					  end
 				   else if input="comp" andalso programType(#2 c_triple) = "comp" then
 					  let
-						  val _ = case (#2 c_triple) of
-							concat (_, b) => (case weakestPrecondition(b, #3 c_triple) of
-								SOME wp => print("\nTry using the weakest precondition of the final program: Q = " ^ toStringBexp(wp) ^ "\n")
-								| _ => ())
-							| _ => ()
-						  
+						 val _ = print "\u001b[2J\u001b[H"; (*cls*)
+						 val _ = print "Original triple:\n"
+						 val _ = print ("  " ^ toStringTriple(original_triple) ^ "\n\n")
+						 val _ = print "Current derivation step:\n"
 						  val _ = print("\n" ^ toStringRule(Rule{
 							premises = case (#2 c_triple) of
-							concat (a, b) => [pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(a) ^ " {Q}"), pdummy ("{Q} " ^ toStringProgram(b) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")]
+							concat (a, b) => [pdummy ("{" ^ toStringBexp(#1 c_triple) ^ "} " ^ toStringProgram(a) ^ " {%}"), pdummy ("{%} " ^ toStringProgram(b) ^ " {" ^ toStringBexp(#3 c_triple) ^ "}")]
 							| _ => [],
-							conclusion = normaltriple c_triple
+							conclusion = selectedtriple c_triple
 						  }))
-						  val _ = print "\n\nInput Q to continue:\n> "
+						  val _ = print "\n\nInput Q to continue or \"back\" to select a different rule"
+						  val _ = case (#2 c_triple) of
+							concat (_, b) => (case weakestPrecondition(b, #3 c_triple) of
+								SOME wp => print("\n\n\u001b[1;36m[Tip] Try using the weakest precondition of the final program: Q = " ^ toStringBexp(wp) ^ "\u001b[0m")
+								| _ => ())
+							| _ => ()
+						  val _ = print "\n\n"
+						  
 					  in 
 
 						let
 							val input = readBexp ()
-							val _ = print (toStringBexp input)
+							val _ = case input of SOME input => print (toStringBexp input) | _ => ()
 						in
-							SOME input
+							input
 						end
 					  end
 				   else NONE
